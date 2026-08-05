@@ -3,8 +3,13 @@ from collections import deque
 from typing import List, Tuple, Dict
 from .cells import Cell, Wall
 
-def solve_bfs(grid: List[List[Cell]], entry: Tuple[int, int], exit: Tuple[int, int]) -> str:
-    """Finds the shortes path from entry to exit and returns it as a string of 
+
+def solve_bfs(
+    grid: List[List[Cell]],
+    entry: Tuple[int, int],
+    exit: Tuple[int, int],
+) -> str:
+    """Finds the shortes path from entry to exit and returns it as a string of
     'N', 'E', 'S', 'W'.
 
     BFS explores the mazee one step at a time, spreading out evenly in every
@@ -53,5 +58,5 @@ def solve_bfs(grid: List[List[Cell]], entry: Tuple[int, int], exit: Tuple[int, i
         prev, move_char = parent[curr]
         path_chars.append(move_char)
         curr = prev
-    
+
     return "".join(reversed(path_chars))

@@ -2,6 +2,7 @@ import random
 from typing import List, Tuple
 from .cells import Cell, Wall
 
+
 class MazeGenerator:
     """Genera un laberinto perfecto (spanning tree sin ciclos) sobre una
     rejilla width x height, usando backtracking con pila explícita."""
@@ -11,15 +12,16 @@ class MazeGenerator:
         self.height = height
         self.rng = random.Random(seed)
 
-        self.grid: List[List[Cell]] = [ 
+        self.grid: List[List[Cell]] = [
             [Cell(x, y) for x in range(width)] for y in range(height)
         ]
 
     def _get_unvisited_neighbors(self, cell: Cell) -> List[Tuple[Cell, Wall]]:
         """Finds the neighbor cells of 'cell' that have not been visited yet,
-        and returns them together with the wall that separates them from 'cell'.
+        and returns them together with the wall that separates them from
+        'cell'.
 
-        We only look at neighbors that are not visited yet. This is the key 
+        We only look at neighbors that are not visited yet. This is the key
         rule that makes sure the final maze has no loops: every cell in the
         maze gets connected to exactly one path, with no cycles.
         Because of this rule, the number of open walls will always be equal to
@@ -32,7 +34,7 @@ class MazeGenerator:
             (0, 1, Wall.SOUTH),
             (-1, 0, Wall.WEST)
         ]
-        
+
         for dx, dy, wall_dir in directions:
             nx, ny = cell.x + dx, cell.y + dy
             if 0 <= nx < self.width and 0 <= ny < self.height:

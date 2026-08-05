@@ -1,5 +1,6 @@
 from enum import IntFlag
 
+
 class Wall(IntFlag):
     NONE = 0
     NORTH = 1

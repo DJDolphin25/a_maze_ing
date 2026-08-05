@@ -1,6 +1,7 @@
 from typing import List
 from .cells import Cell
 
+
 def serialize_maze(grid: List[List[Cell]], solution_path: str) -> str:
     """Writes the maze out in the exact format we need: one line of hex
     digits per row (each digit is a cell's walls), then a blank line,
