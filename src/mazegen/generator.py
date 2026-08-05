@@ -1,3 +1,4 @@
+# mazegen/generator.py
 import random
 from typing import List, Tuple
 from .cells import Cell, Wall

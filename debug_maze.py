@@ -9,8 +9,8 @@ Usage:
 import sys
 from typing import List, Tuple
 
-from src.cells import Cell, Wall
-from src.generator import MazeGenerator
+from src.mazegen.cells import Cell, Wall
+from src.mazegen.generator import MazeGenerator
 
 
 def print_maze(grid: List[List[Cell]], width: int, height: int) -> None:

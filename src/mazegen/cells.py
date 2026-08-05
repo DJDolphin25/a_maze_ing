@@ -1,3 +1,4 @@
+# mazegen/cells.py
 from enum import IntFlag
 
 

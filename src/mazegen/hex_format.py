@@ -1,3 +1,4 @@
+# mazegen/hex_format.py
 from typing import List
 from .cells import Cell
 
