@@ -2,3 +2,10 @@
 __pycache__/
 .pytest_cache/
 *.pyc
+maze_analyzer.py
+maze_output.txt
+maze.txt
+build/
+dist/
+*.egg-info/
+tests/
