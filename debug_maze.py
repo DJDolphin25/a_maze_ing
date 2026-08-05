@@ -73,7 +73,7 @@ def check_spanning_tree(
 def main() -> None:
     width = int(sys.argv[1]) if len(sys.argv) > 1 else 6
     height = int(sys.argv[2]) if len(sys.argv) > 2 else 6
-    seed = int(sys.argv[3]) if len(sys.argv) > 3 else 42
+    seed = int(sys.argv[3]) if len(sys.argv) > 3 else None
 
     gen = MazeGenerator(width, height, seed=seed)
     gen.generate_perfect()
