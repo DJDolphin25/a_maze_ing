@@ -35,15 +35,11 @@ def main(argv: List[str]) -> int:
         print(f"Error: {error}")
         return 1
 
-    if not config.perfect:
-        print(
-            "Error: PERFECT=False (Pac-Man mode) is not implemented yet, "
-            "only PERFECT=True is supported for now."
-        )
-        return 1
-
     generator = MazeGenerator(config.width, config.height, seed=config.seed)
-    generator.generate_perfect(config.entry[0], config.entry[1])
+    if config.perfect:
+        generator.generate_perfect(config.entry[0], config.entry[1])
+    else:
+        generator.generate_non_perfect(config.entry[0], config.entry[1])
 
     path = solve_bfs(generator.grid, config.entry, config.exit)
     output = serialize_maze(generator.grid, config.entry, config.exit, path)
@@ -68,6 +64,7 @@ def main(argv: List[str]) -> int:
             config.height,
             config.entry,
             config.exit,
+            config.perfect,
         )
 
     return 0
