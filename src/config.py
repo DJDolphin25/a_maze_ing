@@ -10,8 +10,11 @@ from typing import Dict, Optional, Tuple
 
 from .mazegen.validation import validate_entry_exit
 
+# The 6 mandatory keys the subject's config file format requires.
 REQUIRED_KEYS = ("WIDTH", "HEIGHT", "ENTRY", "EXIT", "OUTPUT_FILE", "PERFECT")
 
+# Accepted spellings for PERFECT, beyond Python's own "True"/"False" -
+# a bit more forgiving than the subject's exact example, on purpose.
 TRUE_VALUES = {"true", "1", "yes"}
 FALSE_VALUES = {"false", "0", "no"}
 
@@ -51,14 +54,18 @@ def load_config(path: str) -> MazeConfig:
         ConfigError: if the file is missing, has bad syntax, is missing
             a required key, or has an invalid/impossible value.
     """
+
+    # Read key-value string pairs from the raw file into the 'pairs' dictiona
     pairs = _read_key_value_pairs(path)
 
+    # Ensure all 6 mandatory keys exit
     missing = [key for key in REQUIRED_KEYS if key not in pairs]
     if missing:
         raise ConfigError(
             f"missing required key(s) in {path}: {', '.join(missing)}."
         )
 
+    # Parse text strings into their concrete data types (int, tuple, bool)
     width = _parse_positive_int(pairs["WIDTH"], "WIDTH")
     height = _parse_positive_int(pairs["HEIGHT"], "HEIGHT")
     entry = _parse_coordinates(pairs["ENTRY"], "ENTRY")
@@ -105,8 +112,12 @@ def _read_key_value_pairs(path: str) -> Dict[str, str]:
                         f"{path}:{line_number}: {line!r} is not a valid "
                         "KEY=VALUE line."
                     )
+                # partition splits on the first "=" into (key, "=", value)
+                # - we don't need the middle piece, "_" throws it away.
                 key, _, value = line.partition("=")
-                pairs[key.strip()] = value.strip()
+                # Keys are case-insensitive (the subject allows lower case),
+                # so normalize to upper case before storing.
+                pairs[key.strip().upper()] = value.strip()
     except FileNotFoundError:
         raise ConfigError(f"config file not found: {path}")
     except OSError as error:

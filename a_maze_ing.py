@@ -62,7 +62,12 @@ def main(argv: List[str]) -> int:
     # waiting for keyboard input.
     if sys.stdin.isatty():
         run_interactive(
-            config.width, config.height, config.entry, config.exit, config.seed
+            generator,
+            path,
+            config.width,
+            config.height,
+            config.entry,
+            config.exit,
         )
 
     return 0

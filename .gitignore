@@ -10,3 +10,4 @@ dist/
 *.egg-info/
 tests/
 debug_maze.py
+.mypy_cache

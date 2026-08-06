@@ -13,7 +13,7 @@ def validate_entry_exit(
     Per the subject: entry and exit must exist inside the maze bounds,
     be different from each other, and sit on the outer border of the
     maze, like the door of a real maze. This is just about their
-    position - it doesn't open a hole in the outer wall. maze_analyzer.py
+    position, it doesn't open a hole in the outer wall. maze_analyzer.py
     never even looks at outward-facing walls (there's no "outside" cell
     to compare against), so the border stays fully closed everywhere,
     entry/exit included, exactly like generate_perfect() already builds it.
@@ -28,19 +28,21 @@ def validate_entry_exit(
         ValueError: if entry/exit are out of bounds, identical, or not
             on the outer border of the maze.
     """
+
+    if entry == exit:
+        raise ValueError(
+            f"Entry and exit must be different, both are {entry}."
+        )
+
     for name, (x, y) in (("entry", entry), ("exit", exit)):
+
+        # Verify whether coordinates are inside the grid dimensions
         if not (0 <= x < width and 0 <= y < height):
             raise ValueError(
                 f"{name} {(x, y)} is outside the maze bounds "
                 f"({width}x{height})."
             )
 
-    if entry == exit:
-        raise ValueError(
-            f"entry and exit must be different, both are {entry}."
-        )
-
-    for name, (x, y) in (("entry", entry), ("exit", exit)):
         # Border cell = leftmost/rightmost column or topmost/bottommost row
         on_border = x == 0 or x == width - 1 or y == 0 or y == height - 1
         if not on_border:

@@ -12,17 +12,17 @@ from .mazegen.cells import Cell, Wall
 
 # Cycled through with "Rotate the wall colours", using the 256-colour ANSI
 # palette (\033[38;5;Nm) instead of the basic 8 colours, for more variety.
-# \033[0m resets back to the terminal's default color after each one.
 WALL_COLORS = [
-    "\033[38;5;15m",   # white
-    "\033[38;5;196m",  # red
-    "\033[38;5;208m",  # orange
-    "\033[38;5;226m",  # yellow
-    "\033[38;5;46m",   # green
-    "\033[38;5;51m",   # cyan
-    "\033[38;5;33m",   # blue
-    "\033[38;5;129m",  # purple
+    "\033[38;5;15m",   # White
+    "\033[38;5;196m",  # Red
+    "\033[38;5;208m",  # Orange
+    "\033[38;5;226m",  # Yellow
+    "\033[38;5;46m",   # Green
+    "\033[38;5;51m",   # Cyan
+    "\033[38;5;33m",   # Blue
+    "\033[38;5;129m",  # Purple
 ]
+# Resets back to the terminal's default color after each colored piece.
 RESET = "\033[0m"
 
 # Entry/exit/path have their own fixed colour, independent of the wall
@@ -31,6 +31,8 @@ ENTRY_COLOR = "\033[1;32m"  # bold green
 EXIT_COLOR = "\033[1;31m"   # bold red
 PATH_COLOR = "\033[36m"     # cyan
 
+# Each mark is 3 characters wide (color codes aside), to fit the same
+# cell width as EMPTY_MARK and the horizontal wall segments.
 ENTRY_MARK = f"{ENTRY_COLOR} S {RESET}"
 EXIT_MARK = f"{EXIT_COLOR} X {RESET}"
 PATH_MARK = f"{PATH_COLOR} · {RESET}"
@@ -45,8 +47,10 @@ _JUNCTIONS = [
     "╵", "┘", "│", "┤",
     "└", "┴", "├", "┼",
 ]
-H_WALL = "─"  # ─
-V_WALL = "│"  # │
+# H_WALL is repeated 3x to draw a horizontal segment (cells are 3 chars
+# wide); V_WALL is used once, since a vertical segment is 1 char wide.
+H_WALL = "─"
+V_WALL = "│"
 
 
 def path_cells(entry: Tuple[int, int], path: str) -> List[Tuple[int, int]]:
@@ -117,6 +121,7 @@ def render_maze(
         down = row < height and closed_v(col, row)
         left = col > 0 and closed_h(row, col - 1)
         right = col < width and closed_h(row, col)
+        # See _JUNCTIONS above for what each bit combination maps to.
         bits = (up << 3) | (right << 2) | (down << 1) | left
         return _JUNCTIONS[bits]
 
@@ -132,6 +137,9 @@ def render_maze(
             return " "
         return f"{color}{V_WALL}{RESET}"
 
+    # Each row of the maze needs 2 lines of text: one for the wall
+    # crossings + horizontal segments above it, one for the vertical
+    # segments + cell contents. The very last row only needs the top line.
     lines = []
     for row in range(height + 1):
         h_line = ""
@@ -169,24 +177,30 @@ def _cell_mark(
 
 
 def run_interactive(
+    generator: MazeGenerator,
+    path: str,
     width: int,
     height: int,
     entry: Tuple[int, int],
     exit: Tuple[int, int],
-    seed: Optional[int],
 ) -> None:
     """Runs the "=== A-Maze-ing ===" menu loop until the user quits.
 
-    The first maze shown uses `seed` (so a config SEED stays reproducible
-    on first run); every "Re-generate" afterwards uses a fresh random
-    seed, since the whole point of that option is to get a different maze.
+    The first maze shown is `generator`/`path`, exactly as already written
+    to the output file - the caller builds it once and hands it over here,
+    instead of this function generating its own. The two must match:
+    the grading criteria explicitly checks that the first displayed maze
+    is the same one saved to disk. Only "Re-generate" builds a new one,
+    always with a fresh random seed, since that's the point of that option.
 
     Args:
+        generator: the already-built MazeGenerator for the first maze
+            shown (same one written to the output file).
+        path: the already-solved shortest path for `generator`.
         width: maze width, in cells.
         height: maze height, in cells.
         entry: (x, y) coordinates of the entry cell.
         exit: (x, y) coordinates of the exit cell.
-        seed: seed for the first maze shown, or None for a random one.
     """
     def build(use_seed: Optional[int]) -> Tuple[MazeGenerator, str]:
         """Generates a fresh maze and solves it, ready to render."""
@@ -195,7 +209,7 @@ def run_interactive(
         path = solve_bfs(gen.grid, entry, exit)
         return gen, path
 
-    gen, path = build(seed)
+    gen = generator
     color_index = 0
     show_path = True
 

@@ -7,7 +7,6 @@ from .cells import Cell, Wall
 class MazeGenerator:
     """Generates a perfect maze (with no loops) on a width x height grid
     using an explicit stack for backtracking.
-
     """
 
     def __init__(self, width: int, height: int, seed: int | None = None):
