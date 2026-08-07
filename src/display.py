@@ -116,7 +116,7 @@ def render_maze(
         frozenset(path_cells(entry, path)) if path is not None else frozenset()
     )
 
-    def closed_h(row: int, col: int) -> bool:
+    def closed_horizontal(row: int, col: int) -> bool:
         """Is there a closed wall between row-1 and row, at column col?"""
         if row == 0:
             return grid[0][col].has_wall(Wall.NORTH)
@@ -124,7 +124,7 @@ def render_maze(
             return grid[height - 1][col].has_wall(Wall.SOUTH)
         return grid[row][col].has_wall(Wall.NORTH)
 
-    def closed_v(col: int, row: int) -> bool:
+    def closed_vertical(col: int, row: int) -> bool:
         """Is there a closed wall between col-1 and col, at row row?"""
         if col == 0:
             return grid[row][0].has_wall(Wall.WEST)
@@ -134,23 +134,23 @@ def render_maze(
 
     def junction(col: int, row: int) -> str:
         """Box-drawing character for the grid intersection at (col, row)."""
-        up = row > 0 and closed_v(col, row - 1)
-        down = row < height and closed_v(col, row)
-        left = col > 0 and closed_h(row, col - 1)
-        right = col < width and closed_h(row, col)
+        up = row > 0 and closed_vertical(col, row - 1)
+        down = row < height and closed_vertical(col, row)
+        left = col > 0 and closed_horizontal(row, col - 1)
+        right = col < width and closed_horizontal(row, col)
         # See _JUNCTIONS above for what each bit combination maps to.
         bits = (up << 3) | (right << 2) | (down << 1) | left
         return _JUNCTIONS[bits]
 
-    def h_segment(row: int, col: int) -> str:
+    def horizontal_segment(row: int, col: int) -> str:
         """Colored '───' if closed, 3 blank spaces if open."""
-        if not closed_h(row, col):
+        if not closed_horizontal(row, col):
             return "   "
         return f"{color}{H_WALL * 3}{RESET}"
 
-    def v_segment(col: int, row: int) -> str:
+    def vertical_segment(col: int, row: int) -> str:
         """Colored '│' if closed, one blank space if open."""
-        if not closed_v(col, row):
+        if not closed_vertical(col, row):
             return " "
         return f"{color}{V_WALL}{RESET}"
 
@@ -162,18 +162,18 @@ def render_maze(
         h_line = ""
         for col in range(width):
             h_line += f"{color}{junction(col, row)}{RESET}"
-            h_line += h_segment(row, col)
+            h_line += horizontal_segment(row, col)
         h_line += f"{color}{junction(width, row)}{RESET}"
         lines.append(h_line)
 
         if row < height:
             v_line = ""
             for col in range(width):
-                v_line += v_segment(col, row)
+                v_line += vertical_segment(col, row)
                 v_line += _cell_mark(
                     grid, (col, row), entry, exit, on_path, pattern_color
                 )
-            v_line += v_segment(width, row)
+            v_line += vertical_segment(width, row)
             lines.append(v_line)
 
     return "\n".join(lines)

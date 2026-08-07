@@ -95,20 +95,23 @@ def _place_pattern_42(
     the pattern with a 1-cell margin from the border, prints a message
     and returns an empty set, per the subject's explicit allowance.
     """
-    pattern_h = len(PATTERN_42)
-    pattern_w = len(PATTERN_42[0])
+    pattern_height = len(PATTERN_42)
+    pattern_width = len(PATTERN_42[0])
     margin = 1
-    if width < pattern_w + 2 * margin or height < pattern_h + 2 * margin:
+    if (
+        width < pattern_width + 2 * margin
+        or height < pattern_height + 2 * margin
+    ):
         print(
             f"Warning: {width}x{height} maze is too small for the '42' "
             f"pattern (needs at least "
-            f"{pattern_w + 2 * margin}x{pattern_h + 2 * margin}); "
+            f"{pattern_width + 2 * margin}x{pattern_height + 2 * margin}); "
             "skipping it."
         )
         return set()
 
-    origin_x = (width - pattern_w) // 2
-    origin_y = (height - pattern_h) // 2
+    origin_x = (width - pattern_width) // 2
+    origin_y = (height - pattern_height) // 2
 
     blocked: Set[Coord] = set()
     for row_index, row in enumerate(PATTERN_42):
@@ -132,7 +135,7 @@ def _place_pattern_42(
     return blocked
 
 
-def _region(
+def _reachable_cells(
     grid: List[List[Cell]],
     width: int,
     height: int,
@@ -176,7 +179,7 @@ def _ensure_connected(
     if not cells:
         return
 
-    region = _region(grid, width, height, cells[0], blocked)
+    region = _reachable_cells(grid, width, height, cells[0], blocked)
     remaining = set(cells) - region
 
     while remaining:
@@ -201,7 +204,7 @@ def _ensure_connected(
         grid[region_y][region_x].remove_wall(wall)
         grid[remaining_y][remaining_x].remove_wall(Wall.opposite(wall))
 
-        region = _region(grid, width, height, cells[0], blocked)
+        region = _reachable_cells(grid, width, height, cells[0], blocked)
         remaining = set(cells) - region
 
 
@@ -241,10 +244,10 @@ def _add_loops(
         cell = grid[cell_y][cell_x]
         if not cell.has_wall(wall):
             continue  # already open, wouldn't add a loop
-        big_area = _would_open_big_area(
+        completes_3x3_block = _would_complete_3x3_block(
             grid, width, height, cell_x, cell_y, other_x, other_y
         )
-        if big_area:
+        if completes_3x3_block:
             continue
         cell.remove_wall(wall)
         grid[other_y][other_x].remove_wall(opposite_wall)
@@ -284,11 +287,11 @@ def _reduce_dead_ends(
         # qualify, still open one anyway - clearing the dead-end wins.
         chosen = None
         for neighbor_x, neighbor_y, wall in openable:
-            big_area = _would_open_big_area(
+            completes_3x3_block = _would_complete_3x3_block(
                 grid, width, height, dead_end_x, dead_end_y,
                 neighbor_x, neighbor_y,
             )
-            if not big_area:
+            if not completes_3x3_block:
                 chosen = (neighbor_x, neighbor_y, wall)
                 break
         if chosen is None:
@@ -333,7 +336,7 @@ def _real_dead_ends(
     return dead_ends
 
 
-def _would_open_big_area(
+def _would_complete_3x3_block(
     grid: List[List[Cell]],
     width: int,
     height: int,

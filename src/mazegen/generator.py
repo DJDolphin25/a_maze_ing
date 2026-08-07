@@ -89,8 +89,8 @@ class MazeGenerator:
         stack.append(start_cell)
 
         while stack:
-            current = stack[-1]
-            neighbors = self._get_unvisited_neighbors(current)
+            current_cell = stack[-1]
+            neighbors = self._get_unvisited_neighbors(current_cell)
 
             if neighbors:
                 next_cell, wall_dir = self.rng.choice(neighbors)
@@ -98,7 +98,7 @@ class MazeGenerator:
                 # Remove the wall between the two cells, on both sides.
                 # Uses Cell.remove_wall() instead of touching .walls directly,
                 # so the bit manipulation stays in one place (see cells.py).
-                current.remove_wall(wall_dir)
+                current_cell.remove_wall(wall_dir)
                 next_cell.remove_wall(Wall.opposite(wall_dir))
 
                 next_cell.visited = True
