@@ -43,7 +43,6 @@ EMPTY_MARK = "   "
 # give the "42" pattern its own colour. Greys/white first, to match
 # the subject's own reference screenshot.
 PATTERN_COLORS = [
-    "\033[38;5;250m",  # Light grey
     "\033[38;5;15m",   # White
     "\033[38;5;244m",  # Grey
     "\033[38;5;39m",   # Light blue
