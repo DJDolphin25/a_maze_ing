@@ -1,14 +1,14 @@
 # Default configuration for a_maze_ing.py
 # Lines starting with # are comments and are ignored.
 
-WIDTH=20
+WIDTH=15
 HEIGHT=15
 ENTRY=0,0
-EXIT=19,14
+EXIT=14, 14
 OUTPUT_FILE=maze.txt
 PERFECT=False
 
-# False = Pac-Man-style playable board (loops, no dead-end by default,
+# False = Pac-Man-style playable board (loops, at most 2 real dead-ends,
 # the "42" pattern). The "42" pattern needs at least a 9x7 maze to fit
 # with margin, on a smaller one it's skipped with a console warning.
 

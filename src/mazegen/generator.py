@@ -111,7 +111,7 @@ class MazeGenerator:
         start_x: int = 0,
         start_y: int = 0,
         min_loops: int = 2,
-        max_dead_ends: int = 0,
+        max_dead_ends: int = 2,
     ) -> None:
         """Builds a Pac-Man-style playable board (PERFECT=False mode).
 
@@ -120,11 +120,14 @@ class MazeGenerator:
         dead-ends rare - see mazegen/non_perfect.py for how each step
         works and why it's safe to do in that order.
 
-        max_dead_ends defaults to 0 (a fully braided board, no dead-end
-        at all) rather than the subject's tolerated "a couple" - testing
-        showed the algorithm reaches 0 reliably (20/20 sizes and seeds
-        tried), and the subject itself calls that the ideal outcome, so
-        there's no reason to settle for less by default.
+        max_dead_ends defaults to 2, matching the subject's own
+        tolerance and maze_analyzer.py's default. Passing 0 pushes for
+        the fully braided "no dead-end at all" bonus instead - reachable
+        on most sizes, but on a small grid (little free space once the
+        "42" pattern is carved out) it forces so much extra braiding
+        that individual cells can end up open on all 4 sides, which
+        looks more like an open room than a corridor. 2 leaves enough
+        slack for the algorithm to stop before that happens.
 
         Args:
             start_x: column of the cell where generation begins.

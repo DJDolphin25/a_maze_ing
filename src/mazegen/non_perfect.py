@@ -7,7 +7,7 @@ pattern, add loops (independent routes), and keep dead-ends rare -
 without ever opening a 3x3 (or larger) fully-open area.
 """
 import random
-from typing import List, Set, Tuple
+from typing import List, Optional, Set, Tuple
 
 from .cells import Cell, Wall
 
@@ -45,8 +45,8 @@ def make_playable(
         max_dead_ends: real dead-ends tolerated (default matches
             maze_analyzer.py's --max-dead-ends).
     """
-    corners, centre = _corners_and_centre(width, height)
-    blocked = _place_pattern_42(grid, width, height, corners | centre)
+    _, centre_candidates = _corners_and_centre(width, height)
+    blocked = _place_pattern_42(grid, width, height, centre_candidates)
 
     # Closing the "42" cells can split the tree generate_perfect() built;
     # reconnect everything else before touching anything else.
@@ -87,13 +87,25 @@ def _corners_and_centre(
 
 
 def _place_pattern_42(
-    grid: List[List[Cell]], width: int, height: int, must_stay_open: Set[Coord]
+    grid: List[List[Cell]],
+    width: int,
+    height: int,
+    centre_candidates: Set[Coord],
 ) -> Set[Coord]:
     """Closes the cells that draw the "42" pattern, centered in the grid.
 
     Returns the set of cells closed. If the grid is too small to fit
     the pattern with a 1-cell margin from the border, prints a message
-    and returns an empty set, per the subject's explicit allowance.
+    and returns an empty set, per the subject's explicit allowance for
+    omitting the pattern.
+
+    The margin already keeps every placement clear of the 4 corners,
+    so those never need special handling here. The centre is different:
+    maze_analyzer.py only requires that ONE of its (up to four)
+    candidate cells stay reachable, not all of them - covering some of
+    them is fine as long as at least one is left open. That only
+    becomes a real problem on a placement that would cover every single
+    candidate, which is rare and only checked for as a safety net.
     """
     pattern_height = len(PATTERN_42)
     pattern_width = len(PATTERN_42[0])
@@ -110,18 +122,22 @@ def _place_pattern_42(
         )
         return set()
 
-    origin_x = (width - pattern_width) // 2
-    origin_y = (height - pattern_height) // 2
+    origin_x, origin_y = _find_pattern_origin(
+        width, height, pattern_width, pattern_height, margin, centre_candidates
+    )
+    blocked = _pattern_mask(origin_x, origin_y)
 
-    blocked: Set[Coord] = set()
-    for row_index, row in enumerate(PATTERN_42):
-        for col_index, char in enumerate(row):
-            if char != "#":
-                continue
-            cell = (origin_x + col_index, origin_y + row_index)
-            if cell in must_stay_open:
-                continue
-            blocked.add(cell)
+    if centre_candidates <= blocked:
+        # Every centre candidate would end up walled off - leave one of
+        # them open (any single one satisfies maze_analyzer.py) instead
+        # of stranding the centre with nothing reachable at all.
+        keep_open = min(centre_candidates)
+        blocked = blocked - {keep_open}
+        print(
+            f"Warning: the '42' pattern on this {width}x{height} maze "
+            f"would have enclosed every centre cell; leaving {keep_open} "
+            "open so the centre stays reachable."
+        )
 
     for x, y in blocked:
         grid[y][x].add_wall(Wall.ALL)
@@ -133,6 +149,50 @@ def _place_pattern_42(
                 grid[neighbor_y][neighbor_x].add_wall(Wall.opposite(wall))
 
     return blocked
+
+
+def _pattern_mask(origin_x: int, origin_y: int) -> Set[Coord]:
+    """Absolute (x, y) coordinates of the pattern's '#' cells, placed
+    with its top-left corner at (origin_x, origin_y)."""
+    return {
+        (origin_x + col_index, origin_y + row_index)
+        for row_index, row in enumerate(PATTERN_42)
+        for col_index, char in enumerate(row)
+        if char == "#"
+    }
+
+
+def _find_pattern_origin(
+    width: int,
+    height: int,
+    pattern_width: int,
+    pattern_height: int,
+    margin: int,
+    centre_candidates: Set[Coord],
+) -> Coord:
+    """Finds where to place the "42" pattern's top-left corner.
+
+    Prefers whichever valid position is closest to centered; a position
+    that would cover every centre candidate cell is only picked when no
+    better one exists, since that's the one placement _place_pattern_42
+    has to correct for afterwards.
+    """
+    ideal_x = (width - pattern_width) // 2
+    ideal_y = (height - pattern_height) // 2
+
+    best: Optional[Tuple[bool, int, Coord]] = None
+    for origin_y in range(margin, height - pattern_height - margin + 1):
+        for origin_x in range(margin, width - pattern_width - margin + 1):
+            encloses_centre = centre_candidates <= _pattern_mask(
+                origin_x, origin_y
+            )
+            distance = abs(origin_x - ideal_x) + abs(origin_y - ideal_y)
+            key = (encloses_centre, distance)
+            if best is None or key < (best[0], best[1]):
+                best = (encloses_centre, distance, (origin_x, origin_y))
+
+    assert best is not None  # caller already checked the grid fits it
+    return best[2]
 
 
 def _reachable_cells(
@@ -183,29 +243,56 @@ def _ensure_connected(
     remaining = set(cells) - region
 
     while remaining:
-        # Look for any cell already in the connected region that sits
-        # right next to a still-disconnected cell, and open that one
-        # wall between them - a "bridge" merging the two pieces.
-        bridge = None
-        for region_x, region_y in region:
-            for neighbor_x, neighbor_y, wall in _neighbors(
-                region_x, region_y, width, height
-            ):
-                if (neighbor_x, neighbor_y) in remaining:
-                    bridge = (region_x, region_y, neighbor_x, neighbor_y, wall)
-                    break
-            if bridge:
-                break
-
-        if bridge is None:
-            break  # grid is contiguous, so this shouldn't happen
-
-        region_x, region_y, remaining_x, remaining_y, wall = bridge
+        region_x, region_y, remaining_x, remaining_y, wall = _find_bridge(
+            grid, width, height, region, remaining
+        )
         grid[region_y][region_x].remove_wall(wall)
         grid[remaining_y][remaining_x].remove_wall(Wall.opposite(wall))
 
         region = _reachable_cells(grid, width, height, cells[0], blocked)
         remaining = set(cells) - region
+
+
+def _find_bridge(
+    grid: List[List[Cell]],
+    width: int,
+    height: int,
+    region: Set[Coord],
+    remaining: Set[Coord],
+) -> Tuple[int, int, int, int, Wall]:
+    """Finds a wall to open between the connected region and a
+    still-disconnected cell - a "bridge" merging the two pieces.
+
+    When the "42" pattern splits the maze into several pockets, more
+    than one bridge may be needed, and the first-found region cell can
+    otherwise get reused for every one of them, opening wall after
+    wall on that same cell until nothing's closed on it anymore. Prefer
+    a pair where neither side is already down to its last closed wall;
+    fall back to any adjacent pair if every option would do that.
+    """
+    fallback = None
+    for region_x, region_y in region:
+        for neighbor_x, neighbor_y, wall in _neighbors(
+            region_x, region_y, width, height
+        ):
+            if (neighbor_x, neighbor_y) not in remaining:
+                continue
+            candidate = (region_x, region_y, neighbor_x, neighbor_y, wall)
+            if fallback is None:
+                fallback = candidate
+            if (
+                _closed_wall_count(grid[region_y][region_x]) > 1
+                and _closed_wall_count(grid[neighbor_y][neighbor_x]) > 1
+            ):
+                return candidate
+
+    assert fallback is not None  # grid is contiguous, so this can't happen
+    return fallback
+
+
+def _closed_wall_count(cell: Cell) -> int:
+    """How many of a cell's 4 walls are closed (0-4)."""
+    return bin(cell.walls.value).count("1")
 
 
 def _add_loops(
@@ -238,20 +325,38 @@ def _add_loops(
     rng.shuffle(candidates)
 
     loops = 0
-    for cell_x, cell_y, other_x, other_y, wall, opposite_wall in candidates:
-        if loops >= min_loops:
-            break
-        cell = grid[cell_y][cell_x]
-        if not cell.has_wall(wall):
-            continue  # already open, wouldn't add a loop
-        completes_3x3_block = _would_complete_3x3_block(
-            grid, width, height, cell_x, cell_y, other_x, other_y
-        )
-        if completes_3x3_block:
-            continue
-        cell.remove_wall(wall)
-        grid[other_y][other_x].remove_wall(opposite_wall)
-        loops += 1
+
+    def try_candidates(avoid_fully_open: bool) -> None:
+        nonlocal loops
+        for (
+            cell_x, cell_y, other_x, other_y, wall, opposite_wall,
+        ) in candidates:
+            if loops >= min_loops:
+                return
+            cell = grid[cell_y][cell_x]
+            if not cell.has_wall(wall):
+                continue  # already open, wouldn't add a loop
+            other = grid[other_y][other_x]
+            # A cell with only 1 closed wall left would become open on
+            # all 4 sides - technically still legal (never a 3x3 block
+            # by itself), but reads as a bare room, not a corridor. Only
+            # allowed as a fallback if min_loops can't be reached without it.
+            if avoid_fully_open and (
+                _closed_wall_count(cell) == 1 or _closed_wall_count(other) == 1
+            ):
+                continue
+            completes_3x3_block = _would_complete_3x3_block(
+                grid, width, height, cell_x, cell_y, other_x, other_y
+            )
+            if completes_3x3_block:
+                continue
+            cell.remove_wall(wall)
+            other.remove_wall(opposite_wall)
+            loops += 1
+
+    try_candidates(avoid_fully_open=True)
+    if loops < min_loops:
+        try_candidates(avoid_fully_open=False)
 
 
 def _reduce_dead_ends(
@@ -283,16 +388,31 @@ def _reduce_dead_ends(
             continue
         rng.shuffle(openable)
 
-        # Prefer an option that doesn't open a 3x3 area; if none of them
-        # qualify, still open one anyway - clearing the dead-end wins.
-        chosen = None
-        for neighbor_x, neighbor_y, wall in openable:
-            completes_3x3_block = _would_complete_3x3_block(
+        # Prefer an option that neither opens a 3x3 area nor leaves the
+        # neighbor open on all 4 sides; relax those preferences in turn,
+        # but always clear the dead-end in the end - that's the one
+        # requirement that can't be skipped.
+        def is_clean(neighbor_x: int, neighbor_y: int) -> bool:
+            if _closed_wall_count(grid[neighbor_y][neighbor_x]) == 1:
+                return False
+            return not _would_complete_3x3_block(
                 grid, width, height, dead_end_x, dead_end_y,
                 neighbor_x, neighbor_y,
             )
-            if not completes_3x3_block:
-                chosen = (neighbor_x, neighbor_y, wall)
+
+        def avoids_3x3(neighbor_x: int, neighbor_y: int) -> bool:
+            return not _would_complete_3x3_block(
+                grid, width, height, dead_end_x, dead_end_y,
+                neighbor_x, neighbor_y,
+            )
+
+        chosen = None
+        for check in (is_clean, avoids_3x3):
+            for neighbor_x, neighbor_y, wall in openable:
+                if check(neighbor_x, neighbor_y):
+                    chosen = (neighbor_x, neighbor_y, wall)
+                    break
+            if chosen is not None:
                 break
         if chosen is None:
             chosen = openable[0]

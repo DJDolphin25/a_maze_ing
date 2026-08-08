@@ -66,8 +66,10 @@ post-processes it in a fixed order:
 3. add extra walls to open independent routes (loops) between cells already
    connected — done carefully so no 3x3 (or larger) area ever ends up fully
    open,
-4. keep opening walls at real dead-ends until none remain (a fully "braided"
-   board, no dead-end at all).
+4. keep opening walls at real dead-ends down to at most `max_dead_ends`
+   (2 by default, matching the subject's own tolerance) — pass 0 for a
+   fully "braided" board with no dead-end at all, though on a small grid
+   that can force cells open on every side to reach it.
 
 Building on the already-correct perfect generator, rather than writing a
 separate loop-aware algorithm from scratch, means every step only has to
@@ -83,7 +85,8 @@ from mazegen import MazeGenerator, Wall, solve_bfs, serialize_maze
 gen = MazeGenerator(width=20, height=15, seed=42)
 gen.generate_perfect(start_x=0, start_y=0)
 
-# Or the Pac-Man-style mode
+# Or the Pac-Man-style mode (max_dead_ends=0 pushes for the fully
+# braided "no dead-end at all" bonus instead of the default 2)
 gen.generate_non_perfect(start_x=0, start_y=0, min_loops=2, max_dead_ends=0)
 
 # The generated structure: a grid of Cell objects
